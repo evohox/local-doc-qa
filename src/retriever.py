@@ -1,7 +1,6 @@
 import os
 import time
 from dotenv import load_dotenv
-from langchain_community.llms import Ollama
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from src.embedder import get_vectorstore
@@ -10,12 +9,6 @@ from src.logger import get_logger
 load_dotenv()
 
 logger = get_logger("retriever")
-
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5")
-
-
-def get_llm():
-    return Ollama(model=OLLAMA_MODEL, temperature=0.1)
 
 
 def build_prompt() -> PromptTemplate:
@@ -37,7 +30,16 @@ def build_prompt() -> PromptTemplate:
     )
 
 
-def get_qa_chain() -> RetrievalQA:
+def get_confidence(score: float) -> dict:
+    if score <= 0.3:
+        return {"label": "Высокая", "color": "green", "icon": "✓"}
+    elif score <= 0.6:
+        return {"label": "Средняя", "color": "orange", "icon": "~"}
+    else:
+        return {"label": "Низкая", "color": "red", "icon": "✗"}
+
+
+def get_qa_chain(llm) -> RetrievalQA:
     vectorstore = get_vectorstore()
 
     retriever = vectorstore.as_retriever(
@@ -46,7 +48,7 @@ def get_qa_chain() -> RetrievalQA:
     )
 
     chain = RetrievalQA.from_chain_type(
-        llm=get_llm(),
+        llm=llm,
         chain_type="stuff",
         retriever=retriever,
         return_source_documents=True,
@@ -56,18 +58,31 @@ def get_qa_chain() -> RetrievalQA:
     return chain
 
 
-def ask(question: str) -> dict:
+def ask(question: str, llm) -> dict:
     logger.info(f"Вопрос: {question}")
     start = time.time()
 
-    chain = get_qa_chain()
+    vectorstore = get_vectorstore()
+    docs_with_scores = vectorstore.similarity_search_with_score(question, k=3)
+
+    avg_score = (
+        sum(score for _, score in docs_with_scores) / len(docs_with_scores)
+        if docs_with_scores
+        else 1.0
+    )
+    confidence = get_confidence(avg_score)
+    logger.info(
+        f"Средний score релевантности: {round(avg_score, 3)} → {confidence['label']}"
+    )
+
+    chain = get_qa_chain(llm)
     result = chain.invoke({"query": question})
 
     elapsed = round(time.time() - start, 2)
     logger.info(f"Ответ получен за {elapsed}с")
 
     sources = []
-    for doc in result["source_documents"]:
+    for doc, _ in docs_with_scores:
         source = doc.metadata.get("source", "неизвестно")
         page = doc.metadata.get("page", "")
         label = f"{source}, стр. {page + 1}" if page != "" else source
@@ -79,4 +94,6 @@ def ask(question: str) -> dict:
     return {
         "answer": result["result"],
         "sources": sources,
+        "confidence": confidence,
+        "score": round(avg_score, 3),
     }

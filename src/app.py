@@ -78,7 +78,16 @@ if st.button("Спросить", type="primary"):
             with st.spinner("Думаю..."):
                 result = ask(question, llm)
 
-            st.subheader("Ответ")
+            confidence = result["confidence"]
+
+            col1, col2 = st.columns([3, 1])
+            col1.subheader("Ответ")
+            col2.metric(
+                label="Релевантность",
+                value=f"{confidence['icon']} {confidence['label']}",
+                help=f"Score: {result['score']} (чем меньше — тем лучше)",
+            )
+
             st.write(result["answer"])
 
             if result["sources"]:
