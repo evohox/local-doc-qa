@@ -20,7 +20,13 @@ def get_vectorstore():
     )
 
 
+def clear_vectorstore():
+    vectorstore = get_vectorstore()
+    vectorstore.delete_collection()
+
+
 def index_documents(chunks: list) -> Chroma:
+    clear_vectorstore()
     vectorstore = Chroma.from_documents(
         documents=chunks,
         embedding=get_embeddings(),
