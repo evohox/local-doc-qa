@@ -216,3 +216,27 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Виртуальное окружение
+venv/
+.venv/
+
+# Переменные окружения
+.env
+
+# Данные пользователя
+data/uploads/
+data/vectorstore/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Windows
+Thumbs.db
+desktop.ini
