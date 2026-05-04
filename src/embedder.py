@@ -9,17 +9,20 @@ load_dotenv()
 logger = get_logger("embedder")
 
 CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./data/vectorstore")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
 
 def get_embeddings():
-    return OllamaEmbeddings(model=OLLAMA_MODEL)
+    # Используем отдельную модель для эмбеддингов
+    # чтобы не зависеть от выбора LLM модели
+    return OllamaEmbeddings(model=EMBEDDING_MODEL)
 
 
 def get_vectorstore():
     return Chroma(
         persist_directory=CHROMA_DB_PATH,
         embedding_function=get_embeddings(),
+        collection_metadata={"hnsw:space": "cosine"},
     )
 
 

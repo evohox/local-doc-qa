@@ -27,6 +27,12 @@ st.set_page_config(page_title="Local Document Q&A", layout="wide")
 st.title("Local Document Q&A")
 st.caption("Загрузи документы и задавай вопросы по их содержимому")
 
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
 with st.sidebar:
     st.header("Загрузить документ")
     uploaded_file = st.file_uploader("PDF или TXT", type=["pdf", "txt"])
@@ -62,39 +68,67 @@ with st.sidebar:
             col1.markdown(f"📄 {doc}")
             if col2.button("✕", key=f"del_{doc}"):
                 delete_document(doc)
-                logger.info(f"Документ удалён из базы: {doc}")
+                logger.info(f"Документ удалён: {doc}")
                 st.rerun()
 
-question = st.text_input("Вопрос", placeholder="О чём эти документы?")
+    st.divider()
 
-if st.button("Спросить", type="primary"):
-    if not question.strip():
-        st.warning("Введи вопрос")
-    elif not get_indexed_documents():
+    if st.button("Очистить историю"):
+        st.session_state.messages = []
+        st.session_state.chat_history = []
+        st.rerun()
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+        if message["role"] == "assistant" and "sources" in message:
+            if message["sources"]:
+                with st.expander("Источники"):
+                    for source in message["sources"]:
+                        st.markdown(f"- `{source}`")
+            confidence = message.get("confidence")
+            if confidence:
+                st.caption(f"Релевантность: {confidence['icon']} {confidence['label']}")
+
+question = st.chat_input("Задай вопрос по документам...")
+
+if question:
+    if not get_indexed_documents():
         st.warning("База пуста — сначала загрузи документы")
     else:
-        try:
-            llm = get_llm()
+        st.session_state.messages.append({"role": "user", "content": question})
+
+        with st.chat_message("user"):
+            st.write(question)
+
+        with st.chat_message("assistant"):
             with st.spinner("Думаю..."):
-                result = ask(question, llm)
+                try:
+                    result = ask(question, get_llm(), st.session_state.chat_history)
 
-            confidence = result["confidence"]
+                    st.write(result["answer"])
 
-            col1, col2 = st.columns([3, 1])
-            col1.subheader("Ответ")
-            col2.metric(
-                label="Релевантность",
-                value=f"{confidence['icon']} {confidence['label']}",
-                help=f"Score: {result['score']} (чем меньше — тем лучше)",
-            )
+                    if result["sources"]:
+                        with st.expander("Источники"):
+                            for source in result["sources"]:
+                                st.markdown(f"- `{source}`")
 
-            st.write(result["answer"])
+                    confidence = result["confidence"]
+                    st.caption(
+                        f"Релевантность: {confidence['icon']} {confidence['label']}"
+                    )
 
-            if result["sources"]:
-                st.subheader("Источники")
-                for source in result["sources"]:
-                    st.markdown(f"- `{source}`")
+                    st.session_state.chat_history.append((question, result["answer"]))
 
-        except Exception as e:
-            logger.error(f"Ошибка: {e}")
-            st.error(f"Ошибка: {e}")
+                    st.session_state.messages.append(
+                        {
+                            "role": "assistant",
+                            "content": result["answer"],
+                            "sources": result["sources"],
+                            "confidence": confidence,
+                        }
+                    )
+
+                except Exception as e:
+                    logger.error(f"Ошибка: {e}")
+                    st.error(f"Ошибка: {e}")
