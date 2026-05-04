@@ -2,7 +2,8 @@ langchain==0.2.16
 langchain-community==0.2.16
 langchain-chroma==0.1.4
 chromadb==0.5.3
-gradio==4.42.0
+streamlit==1.38.0
 ollama==0.3.3
 pypdf==4.3.1
 python-dotenv==1.0.1
+huggingface_hub==0.23.4
