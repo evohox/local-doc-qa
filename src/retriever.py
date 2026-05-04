@@ -1,11 +1,15 @@
 import os
+import time
 from dotenv import load_dotenv
 from langchain_community.llms import Ollama
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from src.embedder import get_vectorstore
+from src.logger import get_logger
 
 load_dotenv()
+
+logger = get_logger("retriever")
 
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5")
 
@@ -53,8 +57,14 @@ def get_qa_chain() -> RetrievalQA:
 
 
 def ask(question: str) -> dict:
+    logger.info(f"Вопрос: {question}")
+    start = time.time()
+
     chain = get_qa_chain()
     result = chain.invoke({"query": question})
+
+    elapsed = round(time.time() - start, 2)
+    logger.info(f"Ответ получен за {elapsed}с")
 
     sources = []
     for doc in result["source_documents"]:
@@ -63,6 +73,8 @@ def ask(question: str) -> dict:
         label = f"{source}, стр. {page + 1}" if page != "" else source
         if label not in sources:
             sources.append(label)
+
+    logger.info(f"Источников найдено: {len(sources)}")
 
     return {
         "answer": result["result"],
