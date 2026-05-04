@@ -240,3 +240,6 @@ __pycache__/
 # Windows
 Thumbs.db
 desktop.ini
+
+#logger
+logs/
