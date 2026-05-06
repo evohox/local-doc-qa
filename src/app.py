@@ -17,10 +17,15 @@ logger = get_logger("app")
 
 UPLOAD_PATH = os.getenv("UPLOAD_PATH", "./data/uploads")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
 
 def get_llm():
-    return Ollama(model=OLLAMA_MODEL, temperature=0.1)
+    return Ollama(
+        model=OLLAMA_MODEL,
+        temperature=0.1,
+        base_url=OLLAMA_HOST,
+    )
 
 
 st.set_page_config(page_title="Local Document Q&A", layout="wide")

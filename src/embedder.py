@@ -10,12 +10,14 @@ logger = get_logger("embedder")
 
 CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./data/vectorstore")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
 
 def get_embeddings():
-    # Используем отдельную модель для эмбеддингов
-    # чтобы не зависеть от выбора LLM модели
-    return OllamaEmbeddings(model=EMBEDDING_MODEL)
+    return OllamaEmbeddings(
+        model=EMBEDDING_MODEL,
+        base_url=OLLAMA_HOST,
+    )
 
 
 def get_vectorstore():

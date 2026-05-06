@@ -1,0 +1,10 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+.git/
+logs/
+data/vectorstore/
+data/uploads/
+.pytest_cache/
